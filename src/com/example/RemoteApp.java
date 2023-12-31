@@ -1,4 +1,5 @@
 package com.example;
+
 import javax.bluetooth.*;
 import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
@@ -17,6 +18,7 @@ public class RemoteApp extends JFrame {
     private List<RemoteDevice> bluetoothDevices;
     private DefaultComboBoxModel<String> deviceNames;
     private JComboBox<String> deviceComboBox;
+    private JLabel status;
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new RemoteApp().setVisible(true));
@@ -47,136 +49,70 @@ public class RemoteApp extends JFrame {
         });
 
         JButton searchButton = new JButton("Search Devices");
-        searchButton.addActionListener(e -> searchBluetoothDevices());
-
+        JButton connectButton = new JButton("Connect");
         deviceNames = new DefaultComboBoxModel<>();
         deviceComboBox = new JComboBox<>(deviceNames);
+        status = new JLabel("Ready");
 
-        JButton connectButton = new JButton("Connect");
-        connectButton.addActionListener(e -> connectToDevice());
+        Bluetooth bluetooth;
+        try {
+            bluetooth = new Bluetooth();
+            searchButton.addActionListener(e -> {
+                status.setText("Searching...");
+                ((JButton) e.getSource()).setEnabled(false);
 
-        JPanel bluetoothPanel = new JPanel();
+                try {
+                    bluetooth.searchDevices(devices -> {
+                        deviceNames.removeAllElements();
+                        deviceNames.addAll(devices);
+                        // ((JButton) e.getSource()).setText("Search Devices");
+                        status.setText(devices.size()+" found");
+
+                        ((JButton) e.getSource()).setEnabled(true);
+
+                    });
+                } catch (BluetoothStateException e1) {
+                    e1.printStackTrace();
+                }
+
+            });
+            connectButton.addActionListener(e -> {
+                status.setText("Connecting...");
+                ((JButton) e.getSource()).setEnabled(false);
+                try {
+                    bluetooth.connectToDevice(deviceComboBox.getSelectedIndex(), message -> {
+                        ((JButton) e.getSource()).setText("Disconnect");
+                        ((JButton) e.getSource()).setEnabled(true);
+                                                        status.setText(message);
+
+                    },
+                            message -> {
+                                ((JButton) e.getSource()).setText("Connect");
+                                ((JButton) e.getSource()).setEnabled(true);
+                                status.setText(message);
+
+                            });
+                } catch (BluetoothStateException e1) {
+                    e1.printStackTrace();
+                }
+            });
+        } catch (BluetoothStateException e) {
+            e.printStackTrace();
+        }
+
+        JPanel bottomPanel = new JPanel(new GridLayout(2, 1, 10, 10));
+        JPanel bluetoothPanel = new JPanel(new GridLayout(1, 3, 10, 10));
         bluetoothPanel.add(searchButton);
         bluetoothPanel.add(deviceComboBox);
         bluetoothPanel.add(connectButton);
+        bottomPanel.add(bluetoothPanel);
 
-        JPanel contentPane = new JPanel(new BorderLayout());
+        bottomPanel.add(status);
+
+        JPanel contentPane = new JPanel(new BorderLayout(10, 10));
         contentPane.add(canvas, BorderLayout.CENTER);
-        contentPane.add(bluetoothPanel, BorderLayout.SOUTH);
+        contentPane.add(bottomPanel, BorderLayout.SOUTH);
 
         setContentPane(contentPane);
-    }
-
-    private void searchBluetoothDevices() {
-        try {
-            bluetoothDevices = new ArrayList<>();
-            deviceNames.removeAllElements();
-
-            LocalDevice localDevice = LocalDevice.getLocalDevice();
-            DiscoveryAgent agent = localDevice.getDiscoveryAgent();
-
-            agent.startInquiry(DiscoveryAgent.GIAC, new RemoteDeviceDiscovery());
-
-            System.out.println("Searching for devices...");
-            Thread.sleep(5000);
-
-            for (RemoteDevice device : bluetoothDevices) {
-                deviceNames.addElement(device.getBluetoothAddress());
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void connectToDevice() {
-        int selectedIndex = deviceComboBox.getSelectedIndex();
-        if (selectedIndex >= 0 && selectedIndex < bluetoothDevices.size()) {
-            RemoteDevice selectedDevice = bluetoothDevices.get(selectedIndex);
-            System.out.println("Connecting to device: " + selectedDevice.getBluetoothAddress());
-    
-            try {
-                LocalDevice localDevice = LocalDevice.getLocalDevice();
-                DiscoveryAgent agent = localDevice.getDiscoveryAgent();
-    
-                UUID uuid = new UUID("0000110100001000800000805F9B34FB", false); // SPP UUID
-    
-                // Start service discovery with null attrSet
-                agent.searchServices(null, new UUID[] { uuid }, selectedDevice, new DiscoveryListener() {
-                    public void deviceDiscovered(RemoteDevice btDevice, DeviceClass cod) {
-                    }
-    
-                    public void servicesDiscovered(int transID, ServiceRecord[] servRecord) {
-                        for (ServiceRecord record : servRecord) {
-                            String url = record.getConnectionURL(ServiceRecord.NOAUTHENTICATE_NOENCRYPT, false);
-                            if (url != null) {
-                                try {
-                                    StreamConnection streamConnection = (StreamConnection) Connector.open(url);
-                                    // Now you can use the streamConnection to communicate with the device
-                                    // Implement your communication logic here
-                                    System.out.println("Connected to: " + url);
-                                    // Don't forget to close the streamConnection when done
-                                    streamConnection.close();
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        }
-                    }
-    
-                    public void serviceSearchCompleted(int transID, int respCode) {
-                    }
-    
-                    public void inquiryCompleted(int discType) {
-                    }
-                });
-    
-                // Sleep to allow time for service discovery
-                Thread.sleep(5000);
-    
-            } catch (IOException | InterruptedException e) {
-                e.printStackTrace();
-            }
-        } else {
-            System.out.println("Please select a device before connecting.");
-        }
-    }
-    
-
-    private class RemoteDeviceDiscovery implements DiscoveryListener {
-
-        @Override
-        public void deviceDiscovered(RemoteDevice btDevice, DeviceClass cod) {
-            System.out.println("Device discovered: " + btDevice.getBluetoothAddress());
-            bluetoothDevices.add(btDevice);
-            try{
-                //deviceNames.addElement(btDevice.getFriendlyName(true));
-                deviceNames.addElement(btDevice.getBluetoothAddress());
-
-            }
-            catch(Exception e)
-            {
-                deviceNames.addElement(btDevice.getBluetoothAddress());
-            }
-        }
-
-        @Override
-        public void inquiryCompleted(int discType) {
-            if (discType == DiscoveryListener.INQUIRY_COMPLETED) {
-                System.out.println("Device inquiry completed.");
-            } else {
-                System.out.println("Device inquiry failed.");
-            }
-        }
-
-        @Override
-        public void servicesDiscovered(int transID, ServiceRecord[] servRecord) {
-            // Not used in this example
-        }
-
-        @Override
-        public void serviceSearchCompleted(int transID, int respCode) {
-            // Not used in this example
-        }
     }
 }

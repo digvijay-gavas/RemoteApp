@@ -14,9 +14,12 @@ import javax.microedition.io.StreamConnection;
 public class Bluetooth {
 
     private List<RemoteDevice> bluetoothDevices;
+    StreamConnection streamConnection;
+    RemoteDevice selectedDevice;
     private InputStream input;
     private OutputStream output;
     private DiscoveryAgent agent;
+    private boolean isDeviceConnected = false;
 
     Bluetooth() throws BluetoothStateException {
         bluetoothDevices = new ArrayList<>();
@@ -53,18 +56,18 @@ public class Bluetooth {
         });
     }
 
-    interface ConnectionComplete {
+    interface Complete {
         void apply(String message);
     }
 
-    interface ConnectionFailed {
+    interface Failed {
         void apply(String message);
     }
 
-    public void connectToDevice(int selectedIndex, ConnectionComplete connectionComplete,
-            ConnectionFailed connectionFailed) throws BluetoothStateException {
+    public void connectToDevice(int selectedIndex, Complete connectionComplete,
+            Failed connectionFailed) throws BluetoothStateException {
         if (selectedIndex >= 0 && selectedIndex < bluetoothDevices.size()) {
-            RemoteDevice selectedDevice = bluetoothDevices.get(selectedIndex);
+            selectedDevice = bluetoothDevices.get(selectedIndex);
             System.out.println("Connecting to device: " + selectedDevice.getBluetoothAddress());
 
             UUID uuid = new UUID("0000110100001000800000805F9B34FB", false);
@@ -91,12 +94,13 @@ public class Bluetooth {
                         String url = record.getConnectionURL(ServiceRecord.NOAUTHENTICATE_NOENCRYPT, false);
                         if (url != null) {
                             try {
-                                StreamConnection streamConnection = (StreamConnection) Connector.open(url);
+                                streamConnection = (StreamConnection) Connector.open(url);
                                 System.out.println("Connected to: " + url);
                                 input = streamConnection.openInputStream();
                                 output = streamConnection.openOutputStream();
                                 connectionComplete.apply(
                                         "Connected to: " + selectedDevice.getBluetoothAddress() + "(" + url + ")");
+                                isDeviceConnected=true;
 
                             } catch (IOException e) {
                                 connectionFailed.apply(e.getMessage());
@@ -114,11 +118,30 @@ public class Bluetooth {
         }
     }
 
+    public void disconnect(Complete disconnectionComplete, Failed disconnectionFailed) {
+        try {
+            streamConnection.close();
+            disconnectionComplete.apply("Disconnected " + selectedDevice.getBluetoothAddress());
+        } catch (IOException e) {
+            disconnectionFailed.apply("Failed to disconnect " + selectedDevice.getBluetoothAddress());
+            e.printStackTrace();
+        }
+    }
+
+    public boolean isConnected()
+    {
+        return isDeviceConnected;
+    }
+
     public void send(String message) throws IOException {
         output.write(message.getBytes());
+        output.flush();
     }
 
     public String read() throws IOException {
-        return input.readAllBytes().toString();
+        if(input.available()>0)
+            return new String(input.readNBytes(10));
+        else
+            return "Nothing";
     }
 }

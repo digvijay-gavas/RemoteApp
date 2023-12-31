@@ -7,6 +7,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,9 +21,31 @@ public class RemoteApp extends JFrame {
     private DefaultComboBoxModel<String> deviceNames;
     private JComboBox<String> deviceComboBox;
     private JLabel status;
+    static Bluetooth bluetooth;
+
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new RemoteApp().setVisible(true));
+        SwingUtilities.invokeLater(() -> {
+            new RemoteApp().setVisible(true);
+            KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(new KeyEventDispatcher() {
+
+                @Override
+                public boolean dispatchKeyEvent(KeyEvent e) {
+                    if(bluetooth.isConnected())
+                    {
+                        try {
+                            if(e.getID() == KeyEvent.KEY_RELEASED)
+                                bluetooth.send(""+e.getKeyChar());
+                        } catch (IOException e1) {
+                            e1.printStackTrace();
+                        }
+                    }
+                    return true;
+                }
+                
+            });
+
+        });
     }
 
     public RemoteApp() {
@@ -31,6 +55,7 @@ public class RemoteApp extends JFrame {
 
         Canvas canvas = new Canvas();
         canvas.setPreferredSize(new Dimension(400, 400));
+        canvas.setBackground(Color.GRAY);
         canvas.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mousePressed(java.awt.event.MouseEvent evt) {
                 lastX = evt.getX();
@@ -48,13 +73,17 @@ public class RemoteApp extends JFrame {
             }
         });
 
+        JPanel contentPane = new JPanel(new BorderLayout(10, 10));
+
         JButton searchButton = new JButton("Search Devices");
         JButton connectButton = new JButton("Connect");
+        JButton testSendButton = new JButton("Send");
+        JButton testReadButton = new JButton("Read");
+
         deviceNames = new DefaultComboBoxModel<>();
         deviceComboBox = new JComboBox<>(deviceNames);
         status = new JLabel("Ready");
 
-        Bluetooth bluetooth;
         try {
             bluetooth = new Bluetooth();
             searchButton.addActionListener(e -> {
@@ -66,7 +95,7 @@ public class RemoteApp extends JFrame {
                         deviceNames.removeAllElements();
                         deviceNames.addAll(devices);
                         // ((JButton) e.getSource()).setText("Search Devices");
-                        status.setText(devices.size()+" found");
+                        status.setText(devices.size() + " found");
 
                         ((JButton) e.getSource()).setEnabled(true);
 
@@ -77,41 +106,96 @@ public class RemoteApp extends JFrame {
 
             });
             connectButton.addActionListener(e -> {
-                status.setText("Connecting...");
-                ((JButton) e.getSource()).setEnabled(false);
-                try {
-                    bluetooth.connectToDevice(deviceComboBox.getSelectedIndex(), message -> {
+                if (((JButton) e.getSource()).getText() == "Disconnect") {
+                    bluetooth.disconnect(message -> {
+                        status.setText(message);
+                        ((JButton) e.getSource()).setText("Connect");
+                        ((JButton) e.getSource()).setEnabled(true);
+                    }, message -> {
                         ((JButton) e.getSource()).setText("Disconnect");
                         ((JButton) e.getSource()).setEnabled(true);
-                                                        status.setText(message);
+                        status.setText(message);
+                    });
+                } else {
+                    status.setText("Connecting...");
+                    ((JButton) e.getSource()).setEnabled(false);
+                    try {
+                        bluetooth.connectToDevice(deviceComboBox.getSelectedIndex(), message -> {
+                            ((JButton) e.getSource()).setText("Disconnect");
+                            ((JButton) e.getSource()).setEnabled(true);
+                            status.setText(message);
 
-                    },
-                            message -> {
-                                ((JButton) e.getSource()).setText("Connect");
-                                ((JButton) e.getSource()).setEnabled(true);
-                                status.setText(message);
+                        },
+                                message -> {
+                                    ((JButton) e.getSource()).setText("Connect");
+                                    ((JButton) e.getSource()).setEnabled(true);
+                                    status.setText(message);
 
-                            });
-                } catch (BluetoothStateException e1) {
+                                });
+                    } catch (BluetoothStateException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+            });
+
+            testSendButton.addActionListener(e -> {
+                try {
+                    bluetooth.send("ome test message\n");
+                } catch (IOException e1) {
                     e1.printStackTrace();
                 }
             });
+
+            testReadButton.addActionListener(e -> {
+                try {
+                    status.setText("Read: " + bluetooth.read());
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+            });
+
+            contentPane.addKeyListener(new KeyListener() {
+
+                @Override
+                public void keyTyped(KeyEvent e) {
+                    try {
+                        bluetooth.send("" + e.getKeyChar());
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void keyPressed(KeyEvent e) {
+
+                }
+
+                @Override
+                public void keyReleased(KeyEvent e) {
+
+                }
+
+            });
+
         } catch (BluetoothStateException e) {
             e.printStackTrace();
         }
 
-        JPanel bottomPanel = new JPanel(new GridLayout(2, 1, 10, 10));
+        JPanel southPanel = new JPanel(new GridLayout(2, 1, 10, 10));
         JPanel bluetoothPanel = new JPanel(new GridLayout(1, 3, 10, 10));
         bluetoothPanel.add(searchButton);
         bluetoothPanel.add(deviceComboBox);
         bluetoothPanel.add(connectButton);
-        bottomPanel.add(bluetoothPanel);
+        southPanel.add(bluetoothPanel);
+        southPanel.add(status);
 
-        bottomPanel.add(status);
+        JPanel eastPanel = new JPanel(new GridLayout(10, 1, 10, 10));
+        eastPanel.add(testSendButton);
+        eastPanel.add(testReadButton);
 
-        JPanel contentPane = new JPanel(new BorderLayout(10, 10));
         contentPane.add(canvas, BorderLayout.CENTER);
-        contentPane.add(bottomPanel, BorderLayout.SOUTH);
+        contentPane.add(southPanel, BorderLayout.SOUTH);
+        contentPane.add(eastPanel, BorderLayout.EAST);
 
         setContentPane(contentPane);
     }

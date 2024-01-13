@@ -1,23 +1,43 @@
+#include <Servo.h>
 #include <AFMotor.h>
 AF_DCMotor motorL1(1);
-AF_DCMotor motorL2(3);
+//AF_DCMotor motorL2(3);
 AF_DCMotor motorR1(2);
-AF_DCMotor motorR2(4);
+//AF_DCMotor motorR2(4);
+Servo grabber;
+Servo arm;
+
 
 const byte minRoboSpeed = 80;
 const byte mediumRoboSpeed = 150;
 const byte maxRoboSpeed = 255;
 byte roboSpeed = 150;
 
+int grabberPosition=90;
+int armPosition=90;
+int targetArmPosition=90;
+
 bool upPressed = false, downPressed = false, rightPressed = false, leftPressed = false;
+bool armUp = false, armDown = false;
 
 void setup() {
   Serial.begin(115200);
   motorL1.setSpeed(0);
-  motorL2.setSpeed(0);
   motorR1.setSpeed(0);
-  motorR2.setSpeed(0);
-  Serial.println("sssssssssssssss");
+  Serial.println("Hi Bhai..this is me ..your robot");
+  grabber.attach(9);
+  arm.attach(10);
+
+  // try to smooth initial jerk
+  grabber.write(grabberPosition-10);
+  delay(200);
+  grabber.write(grabberPosition);
+
+  // 
+  arm.write(armPosition-10);
+  delay(200);
+  arm.write(armPosition);
+  
 }
 
 void loop() {
@@ -63,10 +83,30 @@ void loop() {
         if (p1 == 'P') roboSpeed = minRoboSpeed;
         else if (p1 == 'R') roboSpeed = mediumRoboSpeed;
         break;
-      case 16: //ctrl
+      case 16: //shift
         p1 = Serial.read();
         if (p1 == 'P') roboSpeed = maxRoboSpeed;
         else if (p1 == 'R') roboSpeed = mediumRoboSpeed;
+        break;
+      case 33: //pageUp
+        p1 = Serial.read();
+        if (p1 == 'P') armUp = true;
+        else if (p1 == 'R') armUp = false;;
+        break;
+      case 34: //pageDown
+        p1 = Serial.read();
+        if (p1 == 'P') armDown = true;
+        else if (p1 == 'R') armDown = false;
+        break;
+      case 36: //home
+        p1 = Serial.read();
+        if (p1 == 'P') targetArmPosition = 0;
+        //else if (p1 == 'R') armDown = false;
+        break;
+      case 35: //end
+        p1 = Serial.read();
+        if (p1 == 'P') targetArmPosition = 160;
+        //else if (p1 == 'R') armDown = false;
         break;
       default:
         break;
@@ -77,8 +117,11 @@ void loop() {
 
 }
 
-// 20 mili-second timer
+
+
+// 10 mili-second timer
 long lastRoboWalkMillis=millis();
+long lastStatusUpdateMillis=millis();
 void roboWalk() {
 
   if( (millis() -lastRoboWalkMillis ) > 10)
@@ -203,23 +246,53 @@ void roboWalk() {
     {
       //Serial.println("<o> X");
     }
+
+    //######################################
+    // ARM
+    //######################################
+
+    if(armUp && !armDown)
+    {
+      targetArmPosition--;
+    }
+    else if(!armUp && armDown)
+    {
+      targetArmPosition++;
+    }
+
+    grabber.write(grabberPosition);
+    if(targetArmPosition !=armPosition)
+    {
+      if(targetArmPosition>=180)
+      {
+        targetArmPosition=180;
+      }
+      else if(targetArmPosition<=0)
+      {
+        targetArmPosition=0;
+      }
+
+      if((targetArmPosition-armPosition)>0)
+      {
+        armPosition++;
+      }else if((targetArmPosition-armPosition)<0)
+      {
+        armPosition--;
+      }
+      arm.write(armPosition);
+
+    }
+
+
+
+
+
     lastRoboWalkMillis=millis();
   }
-}
 
-String readParameter() {
-  String parameter = "";
-  while (Serial.available() > 0) {
-    char c = Serial.read();
-    if (c == ' ' || c == '\n' || c == '\r') {
-      break;
-    }
-    parameter += c;
+  if( (millis() -lastStatusUpdateMillis ) > 200)
+  {
+    Serial.println("A"+String(armPosition));
+    lastStatusUpdateMillis=millis();
   }
-  return parameter;
-}
-
-int readIntParameter() {
-  String parameter = readParameter();
-  return parameter.toInt();
 }

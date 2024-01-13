@@ -48,7 +48,7 @@ void setup() {
   arm.write(armPosition-10);
   delay(200);
   arm.write(armPosition);
-  
+
 }
 
 void loop() {
@@ -159,50 +159,54 @@ void loop() {
 // 10 mili-second timer
 long lastRoboWalkMillis=millis();
 long lastStatusUpdateMillis=millis();
+long lineFollowerMillis=millis();
 void roboWalk() {
 
-  if( (millis() -lastRoboWalkMillis ) > 10)
+
+  if( lineFollowMode && (millis() -lineFollowerMillis ) > 5)
   {
 
-
-    if(lineFollowMode)
+    leftProximity = digitalRead(leftProximityPin) == LOW;
+    rightProxymity = digitalRead(rightProxymityPin) == LOW;
+    // 0 0
+    if(!leftProximity && !rightProxymity)
     {
-      leftProximity = digitalRead(leftProximityPin) == LOW;
-      rightProxymity = digitalRead(rightProxymityPin) == LOW;
-      // 0 0
-      if(!leftProximity && !rightProxymity)
-      {
-        upPressed = true;
-        downPressed = false;
-        leftPressed = false;
-        rightPressed = false;
-      }
-      // 0 1
-      else if(!leftProximity && rightProxymity)
-      {
-        upPressed = false;
-        downPressed = false;
-        leftPressed = false;
-        rightPressed = true;
-      }
-      // 1 0
-      else if(leftProximity && !rightProxymity)
-      {
-        upPressed = false;
-        downPressed = false;
-        leftPressed = true;
-        rightPressed = false;
-      }
-      // 1 1
-      else if(leftProximity && rightProxymity)
-      {
-        upPressed = true;
-        downPressed = false;
-        leftPressed = false;
-        rightPressed = false;
-      }
+      motorL1.setSpeed(roboSpeed);
+      motorR1.setSpeed(roboSpeed);
+      motorL1.run(FORWARD);
+      motorR1.run(FORWARD);
     }
+    // 0 1
+    else if(!leftProximity && rightProxymity)
+    {
+      motorL1.setSpeed(roboSpeed);
+      motorR1.setSpeed(roboSpeed);
+      motorL1.run(FORWARD);
+      motorR1.run(BACKWARD);
+    }
+    // 1 0
+    else if(leftProximity && !rightProxymity)
+    {
+      motorL1.setSpeed(roboSpeed);
+      motorR1.setSpeed(roboSpeed);
+      motorL1.run(BACKWARD);
+      motorR1.run(FORWARD);
+    }
+    // 1 1
+    else if(leftProximity && rightProxymity)
+    {
+      motorL1.setSpeed(roboSpeed);
+      motorR1.setSpeed(roboSpeed);
+      motorL1.run(FORWARD);
+      motorR1.run(FORWARD);      
+    }
+    
 
+    lineFollowerMillis=millis();
+  }
+
+  if( !lineFollowMode && (millis() -lastRoboWalkMillis ) > 10)
+  {
     motorL1.setSpeed(roboSpeed);
     motorR1.setSpeed(roboSpeed);
 

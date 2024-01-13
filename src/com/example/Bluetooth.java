@@ -141,6 +141,10 @@ public class Bluetooth {
         output.write(message.getBytes());
         output.flush();
     }
+    public void send(byte message) throws IOException {
+        output.write(message);
+        output.flush();
+    }
 
     public String readLine() throws IOException {
         return bufferedReader.readLine();

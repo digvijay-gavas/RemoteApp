@@ -39,7 +39,8 @@ public class RemoteApp extends JFrame {
                             if (e.getID() == KeyEvent.KEY_PRESSED) {
                                 if (!pressedKeys.contains(e.getKeyCode())) {
                                     pressedKeys.add(e.getKeyCode());
-                                    bluetooth.send(e.getKeyChar() + "P\n");
+                                    bluetooth.send((byte)e.getKeyCode());
+                                    bluetooth.send("P\n");
                                     keysBuffer.addToBuffer(e.getKeyChar());
                                     for (Object key : keysBuffer.getBufferArray()) {
                                         System.out.print((char) key + " ");
@@ -48,7 +49,8 @@ public class RemoteApp extends JFrame {
                                 }
                             } else if (e.getID() == KeyEvent.KEY_RELEASED) {
                                 pressedKeys.remove(e.getKeyCode());
-                                bluetooth.send(e.getKeyChar() + "R\n");
+                                bluetooth.send((byte)e.getKeyCode());
+                                bluetooth.send("R\n");
                             }
                         } catch (IOException e1) {
                             e1.printStackTrace();
@@ -177,7 +179,7 @@ public class RemoteApp extends JFrame {
                             readOut = bluetooth.readPacket();
                         } catch (Exception e) {
                             // TODO Auto-generated catch block
-                            e.printStackTrace();
+                            //e.printStackTrace();
                         }
                         if (!readOut.equals(""))
                             status.setText("Read: " + readOut);

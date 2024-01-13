@@ -14,11 +14,13 @@ const byte maxRoboSpeed = 255;
 byte roboSpeed = 150;
 
 int grabberPosition=90;
+int targetGrabberPosition=90;
 int armPosition=90;
 int targetArmPosition=90;
 
 bool upPressed = false, downPressed = false, rightPressed = false, leftPressed = false;
 bool armUp = false, armDown = false;
+bool grabberOpen = false, grabberClose = false;
 
 void setup() {
   Serial.begin(115200);
@@ -106,6 +108,30 @@ void loop() {
       case 35: //end
         p1 = Serial.read();
         if (p1 == 'P') targetArmPosition = 160;
+        //else if (p1 == 'R') armDown = false;
+      case 49: //1
+        p1 = Serial.read();
+        if (p1 == 'P') grabberOpen = true;
+        else if (p1 == 'R') grabberOpen = false;
+        break;
+      case 50: //2
+        p1 = Serial.read();
+        if (p1 == 'P') grabberClose = true;
+        else if (p1 == 'R') grabberClose = false;
+        break;
+      case 48: //0
+        p1 = Serial.read();
+        if (p1 == 'P') 
+        {
+          if(targetGrabberPosition>90)
+          {
+            targetGrabberPosition=180;
+          }
+          else
+          {
+            targetGrabberPosition=0;
+          }
+        }
         //else if (p1 == 'R') armDown = false;
         break;
       default:
@@ -260,7 +286,7 @@ void roboWalk() {
       targetArmPosition++;
     }
 
-    grabber.write(grabberPosition);
+    
     if(targetArmPosition !=armPosition)
     {
       if(targetArmPosition>=180)
@@ -280,7 +306,37 @@ void roboWalk() {
         armPosition--;
       }
       arm.write(armPosition);
+    }
 
+    if(grabberOpen && !grabberClose)
+    {
+      targetGrabberPosition--;
+    }
+    else if(!grabberOpen && grabberClose)
+    {
+      targetGrabberPosition++;
+    }
+
+      
+    if(targetGrabberPosition !=grabberPosition)
+    {
+      if(targetGrabberPosition>=180)
+      {
+        targetGrabberPosition=180;
+      }
+      else if(targetGrabberPosition<=0)
+      {
+        targetGrabberPosition=0;
+      }
+
+      if((targetGrabberPosition-grabberPosition)>0)
+      {
+        grabberPosition++;
+      }else if((targetGrabberPosition-grabberPosition)<0)
+      {
+        grabberPosition--;
+      }
+      grabber.write(grabberPosition);
     }
 
 
@@ -292,7 +348,7 @@ void roboWalk() {
 
   if( (millis() -lastStatusUpdateMillis ) > 200)
   {
-    Serial.println("A"+String(armPosition));
+    Serial.println("A"+String(armPosition)+" G"+String(grabberPosition)+" XX");
     lastStatusUpdateMillis=millis();
   }
 }

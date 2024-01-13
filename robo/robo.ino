@@ -1,8 +1,8 @@
 #include <Servo.h>
 #include <AFMotor.h>
-AF_DCMotor motorL1(1);
+AF_DCMotor motorL1(2);
 //AF_DCMotor motorL2(3);
-AF_DCMotor motorR1(2);
+AF_DCMotor motorR1(4);
 //AF_DCMotor motorR2(4);
 Servo grabber;
 Servo arm;
@@ -22,11 +22,20 @@ bool upPressed = false, downPressed = false, rightPressed = false, leftPressed =
 bool armUp = false, armDown = false;
 bool grabberOpen = false, grabberClose = false;
 
+// line follow mode
+bool lineFollowMode=false;
+bool leftProximity = true,rightProxymity=true;
+int leftProximityPin = A1, rightProxymityPin=A0;
+
 void setup() {
   Serial.begin(115200);
+  Serial.println("Hi Bhai..this is me ..your robot");
+
+  pinMode(A3, INPUT);
+  //lineFollowMode = digitalRead(A3) == HIGH;
+
   motorL1.setSpeed(0);
   motorR1.setSpeed(0);
-  Serial.println("Hi Bhai..this is me ..your robot");
   grabber.attach(9);
   arm.attach(10);
 
@@ -48,9 +57,11 @@ void loop() {
     //Serial.println("command "+command);
     byte p1;
     switch (command) {
-      case 'C':
-        // Process 'C' command (as before)
-        Serial.println("Command 'C' received");
+      case 'L':
+      case 'l':
+        p1 = Serial.read();
+        if (p1 == 'P') lineFollowMode = true;
+        else if (p1 == 'R') {lineFollowMode = false;upPressed = false; downPressed = false; rightPressed = false; leftPressed = false;}
         break;
       case 38:
       case 'W':
@@ -152,8 +163,48 @@ void roboWalk() {
 
   if( (millis() -lastRoboWalkMillis ) > 10)
   {
-      motorL1.setSpeed(roboSpeed);
-      motorR1.setSpeed(roboSpeed);
+
+
+    if(lineFollowMode)
+    {
+      leftProximity = digitalRead(leftProximityPin) == LOW;
+      rightProxymity = digitalRead(rightProxymityPin) == LOW;
+      // 0 0
+      if(!leftProximity && !rightProxymity)
+      {
+        upPressed = true;
+        downPressed = false;
+        leftPressed = false;
+        rightPressed = false;
+      }
+      // 0 1
+      else if(!leftProximity && rightProxymity)
+      {
+        upPressed = false;
+        downPressed = false;
+        leftPressed = false;
+        rightPressed = true;
+      }
+      // 1 0
+      else if(leftProximity && !rightProxymity)
+      {
+        upPressed = false;
+        downPressed = false;
+        leftPressed = true;
+        rightPressed = false;
+      }
+      // 1 1
+      else if(leftProximity && rightProxymity)
+      {
+        upPressed = true;
+        downPressed = false;
+        leftPressed = false;
+        rightPressed = false;
+      }
+    }
+
+    motorL1.setSpeed(roboSpeed);
+    motorR1.setSpeed(roboSpeed);
 
     // 0 0 0 0 -1
     if( !downPressed && !leftPressed && !rightPressed && !upPressed)
@@ -348,7 +399,7 @@ void roboWalk() {
 
   if( (millis() -lastStatusUpdateMillis ) > 200)
   {
-    Serial.println("A"+String(armPosition)+" G"+String(grabberPosition)+" XX");
+    Serial.println( String(leftProximity?"o":"-") + String(rightProxymity?"o":"-")  +  " A"+String(armPosition)+" G"+String(grabberPosition));
     lastStatusUpdateMillis=millis();
   }
 }

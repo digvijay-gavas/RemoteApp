@@ -1,7 +1,10 @@
 package com.example;
 
+import java.io.BufferedReader;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +20,7 @@ public class Bluetooth {
     StreamConnection streamConnection;
     RemoteDevice selectedDevice;
     private InputStream input;
+    BufferedReader bufferedReader;
     private OutputStream output;
     private DiscoveryAgent agent;
     private boolean isDeviceConnected = false;
@@ -98,9 +102,10 @@ public class Bluetooth {
                                 System.out.println("Connected to: " + url);
                                 input = streamConnection.openInputStream();
                                 output = streamConnection.openOutputStream();
+                                bufferedReader = new BufferedReader(new InputStreamReader(input));
                                 connectionComplete.apply(
                                         "Connected to: " + selectedDevice.getBluetoothAddress() + "(" + url + ")");
-                                isDeviceConnected=true;
+                                isDeviceConnected = true;
 
                             } catch (IOException e) {
                                 connectionFailed.apply(e.getMessage());
@@ -128,8 +133,7 @@ public class Bluetooth {
         }
     }
 
-    public boolean isConnected()
-    {
+    public boolean isConnected() {
         return isDeviceConnected;
     }
 
@@ -138,10 +142,39 @@ public class Bluetooth {
         output.flush();
     }
 
+    public String readLine() throws IOException {
+        return bufferedReader.readLine();
+    }
+
+    public String readPacket() throws IOException {
+        StringBuffer strBuffer = new StringBuffer();
+
+        while (input.available() > 0) {
+
+            byte readByte=input.readNBytes(1)[0];
+            strBuffer.append((char)readByte);
+            if(readByte==10)
+                break;
+        }
+
+        return strBuffer.toString();
+    }
+
     public String read() throws IOException {
-        if(input.available()>0)
-            return new String(input.readNBytes(10));
-        else
-            return "Nothing";
+        StringBuffer strBuffer = new StringBuffer();
+        while (input.available() > 0) {
+            if (input.available() > 10) {
+                strBuffer.append(new String(input.readNBytes(10)));
+            } else {
+                strBuffer.append(new String(input.readNBytes(1)));
+            }
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+        return strBuffer.toString();
     }
 }

@@ -11,7 +11,9 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class RemoteApp extends JFrame {
 
@@ -22,7 +24,8 @@ public class RemoteApp extends JFrame {
     private JComboBox<String> deviceComboBox;
     private JLabel status;
     static Bluetooth bluetooth;
-
+    static Set<Integer> pressedKeys = new HashSet<>();
+    static CircularBuffer<Character> keysBuffer = new CircularBuffer(10);
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
@@ -31,18 +34,29 @@ public class RemoteApp extends JFrame {
 
                 @Override
                 public boolean dispatchKeyEvent(KeyEvent e) {
-                    if(bluetooth.isConnected())
-                    {
+                    if (bluetooth.isConnected()) {
                         try {
-                            if(e.getID() == KeyEvent.KEY_RELEASED)
-                                bluetooth.send(""+e.getKeyChar());
+                            if (e.getID() == KeyEvent.KEY_PRESSED) {
+                                if (!pressedKeys.contains(e.getKeyCode())) {
+                                    pressedKeys.add(e.getKeyCode());
+                                    bluetooth.send(e.getKeyChar() + "P\n");
+                                    keysBuffer.addToBuffer(e.getKeyChar());
+                                    for (Object key : keysBuffer.getBufferArray()) {
+                                        System.out.print((char) key + " ");
+                                    }
+                                    System.out.println();
+                                }
+                            } else if (e.getID() == KeyEvent.KEY_RELEASED) {
+                                pressedKeys.remove(e.getKeyCode());
+                                bluetooth.send(e.getKeyChar() + "R\n");
+                            }
                         } catch (IOException e1) {
                             e1.printStackTrace();
                         }
                     }
                     return true;
                 }
-                
+
             });
 
         });
@@ -148,11 +162,35 @@ public class RemoteApp extends JFrame {
 
             testReadButton.addActionListener(e -> {
                 try {
-                    status.setText("Read: " + bluetooth.read());
+                    status.setText("Read: " + bluetooth.readPacket());
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
             });
+
+            Thread readThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    String readOut = "";
+                    while (true) {
+                        try {
+                            readOut = bluetooth.readPacket();
+                        } catch (Exception e) {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                        }
+                        if (!readOut.equals(""))
+                            status.setText("Read: " + readOut);
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e) {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            });
+            readThread.start();
 
             contentPane.addKeyListener(new KeyListener() {
 

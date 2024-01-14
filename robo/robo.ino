@@ -25,7 +25,13 @@ bool grabberOpen = false, grabberClose = false;
 // line follow mode
 bool lineFollowMode=false;
 bool leftProximity = true,rightProxymity=true;
+bool previousLeftProximity = true,previousRightProxymity=true;
 int leftProximityPin = A1, rightProxymityPin=A0;
+#define _LEFT 0
+#define _RIGHT 1
+
+int movedDirection=_LEFT;
+int stuckCount;
 
 void setup() {
   Serial.begin(115200);
@@ -163,44 +169,110 @@ long lineFollowerMillis=millis();
 void roboWalk() {
 
 
-  if( lineFollowMode && (millis() -lineFollowerMillis ) > 5)
+  if( lineFollowMode && (millis() -lineFollowerMillis ) > 100)
   {
 
     leftProximity = digitalRead(leftProximityPin) == LOW;
     rightProxymity = digitalRead(rightProxymityPin) == LOW;
+
+
+    if(previousLeftProximity == leftProximity && previousRightProxymity == rightProxymity)
+    {
+      stuckCount++;
+    }
+    else
+    {
+      stuckCount=0;
+    }
     // 0 0
     if(!leftProximity && !rightProxymity)
     {
-      motorL1.setSpeed(roboSpeed);
-      motorR1.setSpeed(roboSpeed);
-      motorL1.run(FORWARD);
-      motorR1.run(FORWARD);
+      if(movedDirection==_LEFT)
+      {
+        motorL1.setSpeed(roboSpeed);
+        motorR1.setSpeed(roboSpeed/2);
+        motorL1.run(FORWARD);
+        motorR1.run(BACKWARD);
+        movedDirection=_RIGHT;
+      }
+      else
+      {
+        motorL1.setSpeed(roboSpeed/2);
+        motorR1.setSpeed(roboSpeed);
+        motorL1.run(BACKWARD);
+        motorR1.run(FORWARD);
+        movedDirection=_LEFT;
+      }
     }
     // 0 1
     else if(!leftProximity && rightProxymity)
     {
-      motorL1.setSpeed(roboSpeed);
-      motorR1.setSpeed(roboSpeed);
-      motorL1.run(FORWARD);
-      motorR1.run(BACKWARD);
+      if(stuckCount<5)
+      {
+        motorL1.setSpeed(roboSpeed);
+        motorR1.setSpeed(roboSpeed/2);
+        motorL1.run(FORWARD);
+        motorR1.run(BACKWARD);
+        movedDirection=_RIGHT;
+      }
+      else
+      {
+        int lineFollowRoboSpeed=roboSpeed+stuckCount;
+        if(lineFollowRoboSpeed>=255) lineFollowRoboSpeed=255;
+        motorL1.setSpeed(lineFollowRoboSpeed);
+        motorR1.setSpeed(lineFollowRoboSpeed);
+        motorL1.run(FORWARD);
+        motorR1.run(BACKWARD);
+        movedDirection=_RIGHT;
+      }
     }
     // 1 0
     else if(leftProximity && !rightProxymity)
     {
-      motorL1.setSpeed(roboSpeed);
-      motorR1.setSpeed(roboSpeed);
-      motorL1.run(BACKWARD);
-      motorR1.run(FORWARD);
+      if(stuckCount<5)
+      {
+        motorL1.setSpeed(roboSpeed/2);
+        motorR1.setSpeed(roboSpeed);
+        motorL1.run(BACKWARD);
+        motorR1.run(FORWARD);
+        movedDirection=_LEFT;
+      }
+      else
+      {
+        int lineFollowRoboSpeed=roboSpeed+stuckCount;
+        if(lineFollowRoboSpeed>=255) lineFollowRoboSpeed=255;
+        motorL1.setSpeed(lineFollowRoboSpeed);
+        motorR1.setSpeed(lineFollowRoboSpeed);
+        motorL1.run(BACKWARD);
+        motorR1.run(FORWARD);
+        movedDirection=_LEFT;
+      }
+
     }
     // 1 1
     else if(leftProximity && rightProxymity)
     {
-      motorL1.setSpeed(roboSpeed);
-      motorR1.setSpeed(roboSpeed);
-      motorL1.run(FORWARD);
-      motorR1.run(FORWARD);      
+      if(movedDirection==_LEFT)
+      {
+        motorL1.setSpeed(roboSpeed);
+        motorR1.setSpeed(roboSpeed/2);
+        motorL1.run(FORWARD);
+        motorR1.run(BACKWARD);
+        movedDirection=_RIGHT;
+      }
+      else
+      {
+        motorL1.setSpeed(roboSpeed/2);
+        motorR1.setSpeed(roboSpeed);
+        motorL1.run(BACKWARD);
+        motorR1.run(FORWARD);
+        movedDirection=_LEFT;
+      }      
     }
     
+
+    previousLeftProximity=leftProximity;
+    previousRightProxymity=rightProxymity;
 
     lineFollowerMillis=millis();
   }

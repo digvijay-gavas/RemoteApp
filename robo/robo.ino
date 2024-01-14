@@ -66,7 +66,7 @@ void loop() {
       case 'L':
       case 'l':
         p1 = Serial.read();
-        if (p1 == 'P') lineFollowMode = true;
+        if (p1 == 'P') {lineFollowMode = true;roboSpeed=minRoboSpeed;}
         else if (p1 == 'R') {lineFollowMode = false;upPressed = false; downPressed = false; rightPressed = false; leftPressed = false;}
         break;
       case 38:
@@ -140,13 +140,17 @@ void loop() {
         p1 = Serial.read();
         if (p1 == 'P') 
         {
-          if(targetGrabberPosition>90)
+          if(targetGrabberPosition>90 && targetGrabberPosition!=180)
           {
             targetGrabberPosition=180;
           }
-          else
+          else if (targetGrabberPosition!=0)
           {
             targetGrabberPosition=0;
+          }
+          else
+          {
+            targetGrabberPosition=180;
           }
         }
         //else if (p1 == 'R') armDown = false;
@@ -475,7 +479,11 @@ void roboWalk() {
 
   if( (millis() -lastStatusUpdateMillis ) > 200)
   {
-    Serial.println( String(leftProximity?"o":"-") + String(rightProxymity?"o":"-")  +  " A"+String(armPosition)+" G"+String(grabberPosition));
+    if(lineFollowMode)
+      Serial.println( String(leftProximity?"o":"-") + String(rightProxymity?"o":"-"));
+    else
+      Serial.println("A"+String(armPosition)+" G"+String(grabberPosition));
+
     lastStatusUpdateMillis=millis();
   }
 }

@@ -21,8 +21,8 @@ public class RemoteApp extends JFrame {
 
     private List<RemoteDevice> bluetoothDevices;
     private DefaultComboBoxModel<String> deviceNames;
-    private JComboBox<String> deviceComboBox;
-    private JLabel status;
+    static JComboBox<String> deviceComboBox;
+    static JLabel status;
     static Bluetooth bluetooth;
     static Set<Integer> pressedKeys = new HashSet<>();
     static CircularBuffer<Character> keysBuffer = new CircularBuffer(10);
@@ -39,7 +39,7 @@ public class RemoteApp extends JFrame {
                             if (e.getID() == KeyEvent.KEY_PRESSED) {
                                 if (!pressedKeys.contains(e.getKeyCode())) {
                                     pressedKeys.add(e.getKeyCode());
-                                    bluetooth.send((byte)e.getKeyCode());
+                                    bluetooth.send((byte) e.getKeyCode());
                                     bluetooth.send("P\n");
                                     keysBuffer.addToBuffer(e.getKeyChar());
                                     for (Object key : keysBuffer.getBufferArray()) {
@@ -49,7 +49,7 @@ public class RemoteApp extends JFrame {
                                 }
                             } else if (e.getID() == KeyEvent.KEY_RELEASED) {
                                 pressedKeys.remove(e.getKeyCode());
-                                bluetooth.send((byte)e.getKeyCode());
+                                bluetooth.send((byte) e.getKeyCode());
                                 bluetooth.send("R\n");
                             }
                         } catch (IOException e1) {
@@ -99,6 +99,7 @@ public class RemoteApp extends JFrame {
         deviceNames = new DefaultComboBoxModel<>();
         deviceComboBox = new JComboBox<>(deviceNames);
         status = new JLabel("Ready");
+        status.setFont(new Font("Consolas", Font.PLAIN, 20));
 
         try {
             bluetooth = new Bluetooth();
@@ -178,8 +179,7 @@ public class RemoteApp extends JFrame {
                         try {
                             readOut = bluetooth.readPacket();
                         } catch (Exception e) {
-                            // TODO Auto-generated catch block
-                            //e.printStackTrace();
+                            
                         }
                         if (!readOut.equals(""))
                             status.setText("Read: " + readOut);

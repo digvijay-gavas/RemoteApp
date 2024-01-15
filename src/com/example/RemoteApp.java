@@ -43,7 +43,7 @@ public class RemoteApp extends JFrame {
                                     bluetooth.send("P\n");
                                     keysBuffer.addToBuffer(e.getKeyChar());
                                     for (Object key : keysBuffer.getBufferArray()) {
-                                        System.out.print((char) key + " ");
+                                        System.out.print(key==null?"":(char) key + " ");
                                     }
                                     System.out.println();
                                 }
@@ -66,11 +66,11 @@ public class RemoteApp extends JFrame {
 
     public RemoteApp() {
         setTitle("Remote App");
-        setSize(500, 500);
+        setSize(800, 300);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         Canvas canvas = new Canvas();
-        canvas.setPreferredSize(new Dimension(400, 400));
+        canvas.setPreferredSize(new Dimension(600, 200));
         canvas.setBackground(Color.GRAY);
         canvas.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mousePressed(java.awt.event.MouseEvent evt) {
@@ -235,7 +235,7 @@ public class RemoteApp extends JFrame {
 
         contentPane.add(canvas, BorderLayout.CENTER);
         contentPane.add(southPanel, BorderLayout.SOUTH);
-        contentPane.add(eastPanel, BorderLayout.EAST);
+        //contentPane.add(eastPanel, BorderLayout.EAST);
 
         setContentPane(contentPane);
     }

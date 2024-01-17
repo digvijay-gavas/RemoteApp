@@ -10,13 +10,22 @@ Servo arm;
 
 const byte minRoboSpeed = 80;
 const byte mediumRoboSpeed = 150;
-const byte maxRoboSpeed = 255;
+const byte maxRoboSpeed = 200;
 byte roboSpeed = 150;
 
 int grabberPosition=90;
 int targetGrabberPosition=90;
+int maxGrabberPosition=134;
+int minGrabberPosttion=0;
+int maxCycleGrabberPosition=134;
+int minCycleGrabberPosttion=47;
+
 int armPosition=90;
 int targetArmPosition=90;
+int maxArmPostion=152;
+int minArmPostion=37;
+int maxCycleArmPostion=124;
+int minCycleArmPostion=66;
 
 bool upPressed = false, downPressed = false, rightPressed = false, leftPressed = false;
 bool armUp = false, armDown = false;
@@ -38,12 +47,12 @@ void setup() {
   Serial.println("Hi Bhai..this is me ..your robot");
 
   pinMode(A3, INPUT);
-  //lineFollowMode = digitalRead(A3) == HIGH;
+  lineFollowMode = digitalRead(A3) == HIGH;
 
   motorL1.setSpeed(0);
   motorR1.setSpeed(0);
-  grabber.attach(9);
-  arm.attach(10);
+  grabber.attach(10);
+  arm.attach(9);
 
   // try to smooth initial jerk
   grabber.write(grabberPosition-10);
@@ -119,12 +128,21 @@ void loop() {
         break;
       case 36: //home
         p1 = Serial.read();
-        if (p1 == 'P') targetArmPosition = 0;
+        if (p1 == 'P') targetArmPosition = minCycleArmPostion;
         //else if (p1 == 'R') armDown = false;
         break;
       case 35: //end
         p1 = Serial.read();
-        if (p1 == 'P') targetArmPosition = 160;
+        if (p1 == 'P') targetArmPosition = maxCycleArmPostion;
+        //else if (p1 == 'R') armDown = false;
+      case 155: //insert
+        p1 = Serial.read();
+        if (p1 == 'P') targetGrabberPosition = maxCycleGrabberPosition;
+        //else if (p1 == 'R') armDown = false;
+        break;
+      case 127: //delete
+        p1 = Serial.read();
+        if (p1 == 'P') targetGrabberPosition = minCycleGrabberPosttion;
         //else if (p1 == 'R') armDown = false;
       case 49: //1
         p1 = Serial.read();
@@ -176,8 +194,8 @@ void roboWalk() {
   if( lineFollowMode && (millis() -lineFollowerMillis ) > 100)
   {
 
-    leftProximity = digitalRead(leftProximityPin) == LOW;
-    rightProxymity = digitalRead(rightProxymityPin) == LOW;
+    leftProximity = digitalRead(leftProximityPin) == HIGH;
+    rightProxymity = digitalRead(rightProxymityPin) == HIGH;
 
 
     if(previousLeftProximity == leftProximity && previousRightProxymity == rightProxymity)
@@ -420,13 +438,13 @@ void roboWalk() {
     
     if(targetArmPosition !=armPosition)
     {
-      if(targetArmPosition>=180)
+      if(targetArmPosition>=maxArmPostion)
       {
-        targetArmPosition=180;
+        targetArmPosition=maxArmPostion;
       }
-      else if(targetArmPosition<=0)
+      else if(targetArmPosition<=minArmPostion)
       {
-        targetArmPosition=0;
+        targetArmPosition=minArmPostion;
       }
 
       if((targetArmPosition-armPosition)>0)
@@ -451,13 +469,13 @@ void roboWalk() {
       
     if(targetGrabberPosition !=grabberPosition)
     {
-      if(targetGrabberPosition>=180)
+      if(targetGrabberPosition>=maxGrabberPosition)
       {
-        targetGrabberPosition=180;
+        targetGrabberPosition=maxGrabberPosition;
       }
-      else if(targetGrabberPosition<=0)
+      else if(targetGrabberPosition<=minGrabberPosttion)
       {
-        targetGrabberPosition=0;
+        targetGrabberPosition=minGrabberPosttion;
       }
 
       if((targetGrabberPosition-grabberPosition)>0)

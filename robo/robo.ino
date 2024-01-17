@@ -185,13 +185,14 @@ void loop() {
 
 
 // 10 mili-second timer
+int count=0;
 long lastRoboWalkMillis=millis();
 long lastStatusUpdateMillis=millis();
 long lineFollowerMillis=millis();
 void roboWalk() {
 
 
-  if( lineFollowMode && (millis() -lineFollowerMillis ) > 100)
+  if( lineFollowMode && (millis() -lineFollowerMillis ) > 50)
   {
 
     leftProximity = digitalRead(leftProximityPin) == HIGH;
@@ -207,28 +208,31 @@ void roboWalk() {
       stuckCount=0;
     }
     // 0 0
-    if(!leftProximity && !rightProxymity)
+    if(leftProximity == rightProxymity)
     {
-      if(movedDirection==_LEFT)
+      if(count==4)
       {
-        motorL1.setSpeed(roboSpeed);
-        motorR1.setSpeed(roboSpeed/2);
+        
+        motorL1.setSpeed(roboSpeed-50);
+        motorR1.setSpeed(roboSpeed-50);
         motorL1.run(FORWARD);
-        motorR1.run(BACKWARD);
-        movedDirection=_RIGHT;
+        motorR1.run(FORWARD);
+        count=0;
       }
       else
       {
-        motorL1.setSpeed(roboSpeed/2);
-        motorR1.setSpeed(roboSpeed);
-        motorL1.run(BACKWARD);
-        motorR1.run(FORWARD);
-        movedDirection=_LEFT;
+        motorL1.setSpeed(0);
+        motorR1.setSpeed(0);
+        motorL1.run(BRAKE);
+        motorR1.run(BRAKE);
       }
+      count++;
+      
     }
     // 0 1
     else if(!leftProximity && rightProxymity)
     {
+      //count=0;
       if(stuckCount<5)
       {
         motorL1.setSpeed(roboSpeed);
@@ -251,6 +255,7 @@ void roboWalk() {
     // 1 0
     else if(leftProximity && !rightProxymity)
     {
+      //count=0;
       if(stuckCount<5)
       {
         motorL1.setSpeed(roboSpeed/2);
@@ -270,26 +275,6 @@ void roboWalk() {
         movedDirection=_LEFT;
       }
 
-    }
-    // 1 1
-    else if(leftProximity && rightProxymity)
-    {
-      if(movedDirection==_LEFT)
-      {
-        motorL1.setSpeed(roboSpeed);
-        motorR1.setSpeed(roboSpeed/2);
-        motorL1.run(FORWARD);
-        motorR1.run(BACKWARD);
-        movedDirection=_RIGHT;
-      }
-      else
-      {
-        motorL1.setSpeed(roboSpeed/2);
-        motorR1.setSpeed(roboSpeed);
-        motorL1.run(BACKWARD);
-        motorR1.run(FORWARD);
-        movedDirection=_LEFT;
-      }      
     }
     
 
@@ -498,7 +483,7 @@ void roboWalk() {
   if( (millis() -lastStatusUpdateMillis ) > 200)
   {
     if(lineFollowMode)
-      Serial.println( String(leftProximity?"o":"-") + String(rightProxymity?"o":"-"));
+      Serial.println( String(leftProximity?"o":"-") + String(rightProxymity?"o":"-")+"  "+String(count));
     else
       Serial.println("A"+String(armPosition)+" G"+String(grabberPosition));
 
